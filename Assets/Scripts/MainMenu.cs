@@ -4,8 +4,7 @@ using UnityEngine.SceneManagement;
 public class MainMenu : MonoBehaviour
 {
     public void PlayGame() {
-        //SceneManager.LoadScene(" add name of next scene here");
-        //Add Scenes to build
+        SceneManager.LoadScene("LevelStart");
     }
 
     public void QuitGame() {
