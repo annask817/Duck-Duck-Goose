@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class HandlingBoundaryCollision : MonoBehaviour
 {
@@ -15,4 +16,11 @@ public class HandlingBoundaryCollision : MonoBehaviour
     {
         
     }
+
+    private void OnCollisionEnter(Collision collision) {
+        if (collision.gameObject.CompareTag("Destroyable")) {
+            Debug.Log("Duck collided with vehicle!");
+            SceneManager.LoadScene("GameOver");
+        }
+    }    
 }
