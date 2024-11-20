@@ -1,92 +1,110 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
+using System.Collections.Generic;
 
-public class DucklingSpawner : MonoBehaviour {
+public class DucklingSpawner : MonoBehaviour
+{
+    [SerializeField] private GameObject ducklingPrefab;
+    private const int REQUIRED_DUCKLINGS = 5;
 
-    /* VARIABLES */
+    private const float MAP_WIDTH = 100f;
+    private const float MAP_HEIGHT = 100f;
 
-    // prefab for duckling to respawn
-    public GameObject ducklingPrefab;
+    [SerializeField] private LayerMask obstacleLayer;
+    [SerializeField] private float checkRadius = 1f;
+    [SerializeField] private float minDucklingDistance = 2f;
 
-    // number of ducklings to spawn
-    public int numOfDucklings = 0;
+    private List<GameObject> spawnedDucklings = new List<GameObject>();
+    //private bool isSpawningComplete = false;
+    private bool isSpawning = false;
 
-    // spawn area
-    public Vector3 spawnAreaSize = new Vector3(10, 0 , 10);
+    private void Start()
+    {
+        if (ducklingPrefab == null)
+        {
+            Debug.LogError("Duckling Prefab is not assigned!");
+            return;
+        }
 
-    // y heaight to place ducklings on
-    public float spawnHeight = 1.0f;
-
-    // prevent spawning on obstacles
-    public float spawnRadiusCheck = 1.5f;
-
-    // identify obstacles to ensure duckling is not spawning too close to obstacle
-    public LayerMask obstacleLayer;
-
-    // spawning interval
-    public float spawnInterval = 3.0f;
-    private float timeSinceLastSpawn = 0.0f;
-
-    /* FUNCTIONS */
-    void Start() {
-        SpawnDucklings();
-    }
-
-    void Update() {
-        // increment time
-        timeSinceLastSpawn += Time.deltaTime;
-
-        if (timeSinceLastSpawn >= spawnInterval) {
-            SpawnDucklings();
-            timeSinceLastSpawn = 0f; // reset timer
+        for (int i = 0; i < REQUIRED_DUCKLINGS; i++)
+        {
+            SpawnDuckling(i);
         }
     }
 
-    void SpawnDucklings() {
-        for (int i = 0; i < numOfDucklings; i++) {
-            Vector3 spawnPosition;
+    private void SpawnDuckling(int i)
+    {
+        if (isSpawning)
+        {
+            Debug.LogWarning("SpawnDuckling() is already in progress.");
+            return;
+        }
 
-            if (TryGetValidSpawnPosition(out spawnPosition)) {
-                // spawn duckling at chosen position
-                Instantiate(ducklingPrefab, spawnPosition, Quaternion.identity);
-                // 'Quaternion.identity' -> we can change so ducklings can face random directions when spawned
-            }   
-            else {
-                Debug.LogWarning("Error: cannot find span position for " + i);
+        isSpawning = true;
+        Debug.Log("SpawnDuckling() called.");
+
+        GameObject parentDuckling = GameObject.Find("Duckling");
+        if (parentDuckling == null)
+        {
+            Debug.LogError("Parent Duckling not found!");
+            isSpawning = false;
+            return;
+        }
+
+        Vector3 spawnPosition = FindValidSpawnPosition();
+        if (spawnPosition != Vector3.zero)
+        {
+            GameObject duckling = Instantiate(ducklingPrefab, spawnPosition, Quaternion.identity, parentDuckling.transform);
+            duckling.name = "Duckling" + i.ToString();
+            duckling.transform.localScale = new Vector3(5f, 5f, 5f);
+            //duckling.layer = LayerMask.NameToLayer("Duckling");
+            spawnedDucklings.Add(duckling);
+            Debug.Log($"Successfully spawned duckling at {spawnPosition}");
+        }
+        else
+        {
+            Debug.LogWarning("Failed to find valid spawn position for duckling.");
+        }
+
+        isSpawning = false;
+    }
+
+    private Vector3 FindValidSpawnPosition()
+    {
+        int maxAttempts = 10;
+        for (int i = 0; i < maxAttempts; i++)
+        {
+            float randomX = Random.Range(-MAP_WIDTH / 2, MAP_WIDTH / 2);
+            float randomZ = Random.Range(-MAP_HEIGHT / 2, MAP_HEIGHT / 2);
+            Vector3 randomPosition = new Vector3(randomX, 0, randomZ);
+
+            if (IsPositionValid(randomPosition))
+            {
+                Debug.Log($"Found valid position at attempt {i + 1}: {randomPosition}");
+                return randomPosition;
             }
         }
+
+        Debug.LogWarning("Could not find valid position after " + maxAttempts + " attempts");
+        return Vector3.zero;
     }
 
-    // find valid position to spawn
-    bool TryGetValidSpawnPosition(out Vector3 result) {
-
-        // attempts to find a valid position
-        // using 10 for now
-        int attempts = 10; 
-
-        for (int i = 0; i < attempts; i++) {
-            Vector3 randomPosition = new Vector3 (
-                Random.Range(-spawnAreaSize.x / 2, spawnAreaSize.x / 2),
-                spawnHeight, // y is given
-                Random.Range(-spawnAreaSize.z / 2, spawnAreaSize.z / 2)
-            );
-
-            // check if spawn location is clear of obstacles
-            if (!Physics.CheckSphere(randomPosition, spawnRadiusCheck, obstacleLayer)) {
-                result = randomPosition;
-                return true; // position found
-            }
+    private bool IsPositionValid(Vector3 position)
+    {
+        if (Physics.CheckSphere(position, checkRadius, obstacleLayer))
+        {
+            Debug.Log($"Position {position} is blocked by an obstacle.");
+            return false;
         }
 
-        result = Vector3.zero;
-        return false;
+        foreach (GameObject duckling in spawnedDucklings)
+        {
+            if (duckling != null &&
+                Vector3.Distance(duckling.transform.position, position) < minDucklingDistance)
+            {
+                Debug.Log($"Position {position} is too close to another duckling.");
+                return false;
+            }
+        }
+        return true;
     }
-
-    // helps visualize spawn area
-    void OnDrawGizmosSelected() {
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawWireCube(transform.position, spawnAreaSize);
-    }
-
 }

@@ -10,10 +10,12 @@ public class PlayerMovement : MonoBehaviour
     public float turnSmoothTime = 0.1f;
     float turnSmoothVelocity;
     public float speed = 6f;
-    // Start is called before the first frame update
+
+    public DucklingManager dm;
+
     void Start()
     {
-        
+
     }
 
     // Update is called once per frame
@@ -27,7 +29,7 @@ public class PlayerMovement : MonoBehaviour
         Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
         //If the player is pressing a movement key
-        if(direction.magnitude >= 0.1f) 
+        if (direction.magnitude >= 0.1f)
         {
             //Calucates the rotation angle so that our character is always facing the cameras direction
             float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
@@ -38,5 +40,22 @@ public class PlayerMovement : MonoBehaviour
             //Moves the character
             controller.Move(direction * speed * Time.deltaTime);
         }
+    }
+
+    void OnTriggerEnter(Collider other)
+    {
+        if (other.CompareTag("Duckling") && dm != null)
+        {
+            Debug.Log("Collecting duckling");
+            Destroy(other.gameObject);
+            dm.ducklingCount++;
+            Debug.Log($"Duckling count: {dm.ducklingCount}");
+        }
+    }
+
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // Log collisions for debugging
+        Debug.Log($"Collided with: {hit.gameObject.name} with tag: {hit.gameObject.tag}");
     }
 }
