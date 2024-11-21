@@ -15,6 +15,6 @@ public class GameOver : MonoBehaviour
         #if UNITY_EDITOR
         EditorApplication.isPlaying = false; // Stops play mode in the editor
         #endif
-        //Application.Quit();
+        Application.Quit();
     }
 }
