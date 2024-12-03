@@ -1,24 +1,29 @@
 using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Tilemaps; 
 
 public class DucklingSpawner : MonoBehaviour
 {
-    [SerializeField] private GameObject ducklingPrefab;
-    private const int REQUIRED_DUCKLINGS = 5;
+    [SerializeField] public GameObject ducklingPrefab;
+    [SerializeField] public float checkRadius;
+    [SerializeField] public float minDucklingDistance;
+    public List<GameObject> spawnedDucklings = new List<GameObject>();
+    // spawn amount
+    public int REQUIRED_DUCKLINGS;
 
-    private const float MAP_WIDTH = 100f;
-    private const float MAP_HEIGHT = 100f;
+    // map size
+    public float MAP_WIDTH = 45f;
+    public float MAP_HEIGHT = 45f;    
 
-    [SerializeField] private LayerMask obstacleLayer;
-    [SerializeField] private float checkRadius = 1f;
-    [SerializeField] private float minDucklingDistance = 2f;
+    public bool isSpawning = false;
 
-    private List<GameObject> spawnedDucklings = new List<GameObject>();
-    //private bool isSpawningComplete = false;
-    private bool isSpawning = false;
-
-    private void Start()
+    public void Start()
     {
+        
+        // generate random amount of ducklings
+        REQUIRED_DUCKLINGS = Random.Range(5, 21);
+        Debug.Log($"Spawning {REQUIRED_DUCKLINGS} ducklings");
+
         if (ducklingPrefab == null)
         {
             Debug.LogError("Duckling Prefab is not assigned!");
@@ -30,8 +35,10 @@ public class DucklingSpawner : MonoBehaviour
             SpawnDuckling(i);
         }
     }
+    
 
-    private void SpawnDuckling(int i)
+    // spawn ducklings
+    public void SpawnDuckling(int i)
     {
         if (isSpawning)
         {
@@ -42,7 +49,8 @@ public class DucklingSpawner : MonoBehaviour
         isSpawning = true;
         Debug.Log("SpawnDuckling() called.");
 
-        GameObject parentDuckling = GameObject.Find("Duckling");
+        GameObject parentDuckling = GameObject.Find("DucklingContainer");
+
         if (parentDuckling == null)
         {
             Debug.LogError("Parent Duckling not found!");
@@ -54,29 +62,31 @@ public class DucklingSpawner : MonoBehaviour
         if (spawnPosition != Vector3.zero)
         {
             GameObject duckling = Instantiate(ducklingPrefab, spawnPosition, Quaternion.identity, parentDuckling.transform);
-            duckling.name = "Duckling" + i.ToString();
-            duckling.transform.localScale = new Vector3(5f, 5f, 5f);
-            //duckling.layer = LayerMask.NameToLayer("Duckling");
+            duckling.name = $"Duckling_{i}";
             spawnedDucklings.Add(duckling);
-            Debug.Log($"Successfully spawned duckling at {spawnPosition}");
+            Debug.Log($"Successfully spawned duckling {i + 1} at {spawnPosition}");
         }
         else
         {
-            Debug.LogWarning("Failed to find valid spawn position for duckling.");
+            Debug.LogWarning($"Failed to spawn duckling {i + 1}. No valid position found.");
         }
 
         isSpawning = false;
     }
 
-    private Vector3 FindValidSpawnPosition()
+    // find spawn point
+    public Vector3 FindValidSpawnPosition()
     {
-        int maxAttempts = 10;
+        // attempts to validate spawn point
+        int maxAttempts = 20;
+
         for (int i = 0; i < maxAttempts; i++)
         {
-            float randomX = Random.Range(-MAP_WIDTH / 2, MAP_WIDTH / 2);
-            float randomZ = Random.Range(-MAP_HEIGHT / 2, MAP_HEIGHT / 2);
-            Vector3 randomPosition = new Vector3(randomX, 0, randomZ);
-
+            float randomX = Random.Range(-MAP_WIDTH, 0f); 
+            float randomZ = Random.Range(0f, MAP_HEIGHT);  
+            
+            Vector3 randomPosition = new Vector3(randomX, 1f, randomZ); 
+            
             if (IsPositionValid(randomPosition))
             {
                 Debug.Log($"Found valid position at attempt {i + 1}: {randomPosition}");
@@ -88,23 +98,28 @@ public class DucklingSpawner : MonoBehaviour
         return Vector3.zero;
     }
 
-    private bool IsPositionValid(Vector3 position)
+    // validate spawn point
+    public bool IsPositionValid(Vector3 position)
     {
-        if (Physics.CheckSphere(position, checkRadius, obstacleLayer))
+        // check for obstacles 
+        Collider[] colliders = Physics.OverlapBox(position, Vector3.one * checkRadius, Quaternion.identity, LayerMask.GetMask("Obstacle"));
+        if (colliders.Length > 0)
         {
             Debug.Log($"Position {position} is blocked by an obstacle.");
             return false;
         }
 
+        // check if the position is too close to other ducklings
         foreach (GameObject duckling in spawnedDucklings)
         {
-            if (duckling != null &&
-                Vector3.Distance(duckling.transform.position, position) < minDucklingDistance)
+            if (duckling != null && Vector3.Distance(duckling.transform.position, position) < minDucklingDistance)
             {
                 Debug.Log($"Position {position} is too close to another duckling.");
                 return false;
             }
         }
+
         return true;
     }
+
 }
